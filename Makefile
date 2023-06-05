@@ -1,6 +1,9 @@
 BINDIR ?= $(CURDIR)/bin
 ARCH   ?= amd64
 
+GIT_VERSION          ?= $(shell git describe --tags --always --dirty --exclude "deploy-*" 2>/dev/null || echo dev)
+DOCKER_BUILD_VERSION ?= $(shell echo $(GIT_VERSION) | tr '+' '_')
+
 help:  ## display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
@@ -17,8 +20,8 @@ verify: test build ## tests and builds version-checker
 
 docker-push: ## build docker image
 	GOARCH=$(ARCH) GOOS=linux CGO_ENABLED=0 go build -o ./bin/version-checker-linux ./cmd/.
-		docker build . -f Dockerfile \
-		-t ghcr.io/ffreville/version-checker:v0.1.0 \
+		docker buildx build . -f Dockerfile \
+		-t ghcr.io/ffreville/version-checker:$(DOCKER_BUILD_VERSION)\
 		--platform=$(DOCKER_BUILDX_PLATFORMS) \
 		--push
 

@@ -148,22 +148,24 @@ func (c *Client) Tags(ctx context.Context, host, repo, image string) ([]api.Imag
 				manifestURL, httpErr.StatusCode, httpErr.Body)
 			continue
 		}
-		if err != nil {
-			return nil, err
-		}
-
 		var timestamp time.Time
-		for _, v1History := range manifestResponse.History {
-			data := V1Compatibility{}
-			if err := json.Unmarshal([]byte(v1History.V1Compatibility), &data); err != nil {
+		if !strings.Contains(err.Error(), "application/vnd.docker.distribution.manifest.list.v2+json") {
+			if err != nil {
 				return nil, err
 			}
 
-			if !data.Created.IsZero() {
-				timestamp = data.Created
-				// Each layer has its own created timestamp. We just want a general reference.
-				// Take the first and step out the loop
-				break
+			for _, v1History := range manifestResponse.History {
+				data := V1Compatibility{}
+				if err := json.Unmarshal([]byte(v1History.V1Compatibility), &data); err != nil {
+					return nil, err
+				}
+
+				if !data.Created.IsZero() {
+					timestamp = data.Created
+					// Each layer has its own created timestamp. We just want a general reference.
+					// Take the first and step out the loop
+					break
+				}
 			}
 		}
 
